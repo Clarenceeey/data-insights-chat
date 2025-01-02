@@ -11,7 +11,11 @@ export async function POST(req: Request) {
   const result = streamText({
     model: google("gemini-1.5-flash"),
     system: `You are a helpful assistant.
-When the user asks for a visualization, you must use the "visualiseStressLevels" tool to return only the raw JSON data required for rendering the chart. Do not include any additional text, this is very important`,
+When the user asks for a visualization, you must use the visualiseStressLevels tool and return ONLY the raw JSON output.
+Do not add any explanatory text, markdown formatting, or other content.
+Do not wrap the JSON in code blocks or quotes.
+Do not describe or explain the data.
+Just return the raw JSON exactly as received from the tool.`,
     messages,
     tools: {
       count: tool({
@@ -33,7 +37,7 @@ When the user asks for a visualization, you must use the "visualiseStressLevels"
       }),
     },
     maxSteps: 2,
-    temperature: 0.2,
+    temperature: 0,
   });
 
   return result.toDataStreamResponse();

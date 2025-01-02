@@ -20,36 +20,32 @@ export default function Chat() {
     api: "./api/chat",
   });
 
-  const isChartMessage = (message) => {
+  // Helper function to parse JSON response
+  const parseJsonResponse = (response) => {
     try {
-      // Extract JSON part wrapped in backticks
-      if (message.role !== "user") {
-        console.log(`message: ${message.content}`);
+      if (response.role === "user") {
+        return null;
       }
-      const jsonMatch = message.content.match(/```json([\s\S]*?)```/);
-      if (jsonMatch && jsonMatch[1]) {
-        const jsonString = jsonMatch[1].trim(); // Extract the JSON string
-        const data = JSON.parse(jsonString); // Parse the JSON
-        return data.labels && data.datasets; // Check if it's valid chart data
-      }
-      return false;
-    } catch (error) {
-      console.error("Error parsing chart message:", error);
-      return false; // Not valid JSON
-    }
-  };
+      // Remove backticks and trim the response
+      const jsonString = response.replace(/```json|```/g, "").trim();
+      const rawData = JSON.parse(jsonString);
 
-  const mockChartData = {
-    labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-    datasets: [
-      {
-        label: "Number of Students",
-        data: [2, 3, 5, 1, 0, 4, 2, 6, 7, 3],
-        backgroundColor: "rgba(75, 192, 192, 0.2)",
-        borderColor: "rgba(75, 192, 192, 1)",
-        borderWidth: 1,
-      },
-    ],
+      // Transform the data into the format required by Chart.js
+      return {
+        labels: rawData.labels,
+        datasets: [
+          {
+            label: "Number of Students",
+            data: rawData.values,
+            backgroundColor: "rgba(75, 192, 192, 0.2)",
+            borderColor: "rgba(75, 192, 192, 1)",
+            borderWidth: 1,
+          },
+        ],
+      };
+    } catch (error) {
+      return null; // Return null if parsing or transformation fails
+    }
   };
 
   return (
@@ -64,62 +60,66 @@ export default function Chat() {
         {messages
           .filter((m) => m.content.trim() !== "")
           .map((m) => {
-            if (isChartMessage(m)) {
-              console.log("chart");
-              const chartData = JSON.parse(m.content); // Parse chart data
+            // Parse chart data if the message contains JSON
+            const chartData = parseJsonResponse(m.content);
+
+            if (chartData) {
               return (
-                <div key={m.id} className="flex justify-start mb-4 w-full max-w-xs">
-                  <Bar
-                    data={chartData}
-                    options={{
-                      responsive: true,
-                      plugins: {
-                        legend: {
-                          display: true,
-                          position: "top",
-                        },
-                        tooltip: {
-                          enabled: true,
-                        },
-                      },
-                      scales: {
-                        x: {
-                          title: {
+                <div key={m.id} className="flex justify-start mb-4 w-full">
+                  <div className="w-full max-w-lg">
+                    <Bar
+                      data={chartData}
+                      options={{
+                        responsive: true,
+                        plugins: {
+                          legend: {
                             display: true,
-                            text: "Mental Health Ratings (1-10)",
+                            position: "top",
+                          },
+                          tooltip: {
+                            enabled: true,
                           },
                         },
-                        y: {
-                          beginAtZero: true,
-                          title: {
-                            display: true,
-                            text: "Number of Students",
+                        scales: {
+                          x: {
+                            title: {
+                              display: true,
+                              text: "Mental Health Ratings (1-10)",
+                            },
+                          },
+                          y: {
+                            beginAtZero: true,
+                            title: {
+                              display: true,
+                              text: "Number of Students",
+                            },
                           },
                         },
-                      },
-                    }}
-                  />
-                </div>
-              );
-            } else {
-              return (
-                <div
-                  key={m.id}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}
-                >
-                  {m.role !== "user" && (
-                    <img src="/image.png" className="w-8 h-8 rounded-full mr-2" alt="AI Avatar" />
-                  )}
-                  <div
-                    className={`p-3 rounded-lg max-w-xs ${
-                      m.role === "user" ? "bg-gray-200 text-gray-800" : "bg-white text-black"
-                    }`}
-                  >
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                      }}
+                    />
                   </div>
                 </div>
               );
             }
+
+            // Render regular text message
+            return (
+              <div
+                key={m.id}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} mb-4`}
+              >
+                {m.role !== "user" && (
+                  <img src="/image.png" className="w-8 h-8 rounded-full mr-2" alt="AI Avatar" />
+                )}
+                <div
+                  className={`p-3 rounded-lg max-w-xs ${
+                    m.role === "user" ? "bg-gray-200 text-gray-800" : "bg-white text-black"
+                  }`}
+                >
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                </div>
+              </div>
+            );
           })}
       </div>
 
